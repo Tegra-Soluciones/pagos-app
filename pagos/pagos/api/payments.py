@@ -51,7 +51,7 @@ def _pre_generate_occurrences(source_name, months_ahead=12):
     Walks every date from source.due_date to the cutoff, filling any gaps.
     This handles cases where far-future records exist but intermediate months are missing.
     """
-    source = frappe.get_doc("Payment Schedule", source_name)
+    source = frappe.get_doc("Pago Programado", source_name)
     if not source.is_recurring:
         return
 
@@ -73,7 +73,7 @@ def _pre_generate_occurrences(source_name, months_ahead=12):
             break
 
         # Only insert if this date+title doesn't exist yet
-        already = frappe.db.exists("Payment Schedule", {
+        already = frappe.db.exists("Pago Programado", {
             "title": source.title,
             "due_date": next_d.isoformat(),
             "is_recurring": 1,
@@ -83,7 +83,7 @@ def _pre_generate_occurrences(source_name, months_ahead=12):
             continue
 
         new_doc = frappe.get_doc({
-            "doctype": "Payment Schedule",
+            "doctype": "Pago Programado",
             "title": source.title,
             "related_to": source.related_to,
             "category": source.category,
@@ -116,7 +116,7 @@ def get_dashboard():
 
     # This week — Pending/Overdue only
     this_week = frappe.get_all(
-        "Payment Schedule",
+        "Pago Programado",
         filters={
             "due_date": ["between", [monday.isoformat(), sunday.isoformat()]],
             "status": ["in", ["Pending", "Overdue"]],
@@ -135,7 +135,7 @@ def get_dashboard():
     next_start = (sunday + timedelta(days=1)).isoformat()
     next_end = (today_d + timedelta(days=30)).isoformat()
     upcoming = frappe.get_all(
-        "Payment Schedule",
+        "Pago Programado",
         filters={
             "due_date": ["between", [next_start, next_end]],
             "status": ["in", ["Pending", "Overdue"]],
@@ -149,7 +149,7 @@ def get_dashboard():
 
     # Overdue before this week
     overdue = frappe.get_all(
-        "Payment Schedule",
+        "Pago Programado",
         filters={"due_date": ["<", monday.isoformat()], "status": "Overdue"},
         fields=["name", "title", "amount", "currency", "due_date", "status",
                 "category", "related_to"],
@@ -162,7 +162,7 @@ def get_dashboard():
     # Paid this month
     month_start = date(today_d.year, today_d.month, 1).isoformat()
     paid_month = frappe.get_all(
-        "Payment Schedule",
+        "Pago Programado",
         filters={
             "due_date": ["between", [month_start, today_d.isoformat()]],
             "status": "Paid",
@@ -173,8 +173,8 @@ def get_dashboard():
     )
 
     counts = {
-        "pending": frappe.db.count("Payment Schedule", {"status": "Pending"}),
-        "overdue":  frappe.db.count("Payment Schedule", {"status": "Overdue"}),
+        "pending": frappe.db.count("Pago Programado", {"status": "Pending"}),
+        "overdue":  frappe.db.count("Pago Programado", {"status": "Overdue"}),
         "paid_this_month": len(paid_month),
     }
 
@@ -199,7 +199,7 @@ def get_dashboard():
 @frappe.whitelist()
 def get_calendar_events(start, end):
     payments = frappe.get_all(
-        "Payment Schedule",
+        "Pago Programado",
         filters={
             "due_date": ["between", [start, end]],
             "status": ["not in", ["Cancelled"]],
@@ -267,7 +267,7 @@ def get_payments_by_month(year=None, month=None, status=None, category=None):
         filters["category"] = category
 
     payments = frappe.get_all(
-        "Payment Schedule",
+        "Pago Programado",
         filters=filters,
         fields=["name", "title", "related_to", "amount", "currency", "due_date",
                 "status", "category", "is_recurring", "recurrence_type",
@@ -297,8 +297,8 @@ def get_payments_by_month(year=None, month=None, status=None, category=None):
 
 @frappe.whitelist()
 def get_payment(name):
-    doc = frappe.get_doc("Payment Schedule", name)
-    frappe.has_permission("Payment Schedule", "read", doc=doc, throw=True)
+    doc = frappe.get_doc("Pago Programado", name)
+    frappe.has_permission("Pago Programado", "read", doc=doc, throw=True)
     result = doc.as_dict()
     result["color"] = _status_color(doc.status)
     result["logs"] = frappe.get_all(
@@ -318,7 +318,7 @@ def create_payment(data):
     if isinstance(data, str):
         data = json.loads(data)
 
-    doc = frappe.get_doc({"doctype": "Payment Schedule", **data})
+    doc = frappe.get_doc({"doctype": "Pago Programado", **data})
     doc.flags.skip_pre_generate = True
     doc.insert(ignore_permissions=True)
     frappe.db.commit()
@@ -336,8 +336,8 @@ def update_payment(name, data):
     if isinstance(data, str):
         data = json.loads(data)
 
-    doc = frappe.get_doc("Payment Schedule", name)
-    frappe.has_permission("Payment Schedule", "write", doc=doc, throw=True)
+    doc = frappe.get_doc("Pago Programado", name)
+    frappe.has_permission("Pago Programado", "write", doc=doc, throw=True)
     doc.flags.skip_pre_generate = True
     doc.update(data)
     doc.save(ignore_permissions=True)
@@ -353,11 +353,11 @@ def mark_paid(name, paid_date=None, amount=None, notes=None):
     """
     from frappe.utils import today as _today
 
-    doc = frappe.get_doc("Payment Schedule", name)
-    frappe.has_permission("Payment Schedule", "write", doc=doc, throw=True)
+    doc = frappe.get_doc("Pago Programado", name)
+    frappe.has_permission("Pago Programado", "write", doc=doc, throw=True)
 
     # 1. Mark as Paid directly — reliable, no hook dependency
-    frappe.db.set_value("Payment Schedule", name, "status", "Paid")
+    frappe.db.set_value("Pago Programado", name, "status", "Paid")
     frappe.db.commit()
 
     # 2. Create payment log
@@ -385,9 +385,9 @@ def mark_paid(name, paid_date=None, amount=None, notes=None):
 
 @frappe.whitelist(methods=["POST"])
 def delete_payment(name):
-    doc = frappe.get_doc("Payment Schedule", name)
-    frappe.has_permission("Payment Schedule", "delete", doc=doc, throw=True)
-    frappe.delete_doc("Payment Schedule", name)
+    doc = frappe.get_doc("Pago Programado", name)
+    frappe.has_permission("Pago Programado", "delete", doc=doc, throw=True)
+    frappe.delete_doc("Pago Programado", name)
     frappe.db.commit()
     return {"message": "Pago eliminado."}
 
@@ -399,7 +399,7 @@ def repair_recurring_payments(months_ahead=12):
     """Fill gaps in recurring payment occurrences for all active recurring payments."""
     # Find one representative per recurring group (the earliest record per title+type)
     sources = frappe.get_all(
-        "Payment Schedule",
+        "Pago Programado",
         filters={"is_recurring": 1, "status": ["not in", ["Cancelled"]]},
         fields=["name", "title", "recurrence_type"],
         order_by="due_date asc",

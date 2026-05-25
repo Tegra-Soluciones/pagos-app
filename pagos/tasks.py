@@ -8,12 +8,12 @@ def update_overdue_payments():
     """Mark Pending payments as Overdue if their due_date has passed."""
     today_d = getdate(today())
     overdue = frappe.get_all(
-        "Payment Schedule",
+        "Pago Programado",
         filters={"status": "Pending", "due_date": ["<", today_d.isoformat()]},
         fields=["name"],
     )
     for p in overdue:
-        frappe.db.set_value("Payment Schedule", p["name"], "status", "Overdue")
+        frappe.db.set_value("Pago Programado", p["name"], "status", "Overdue")
     frappe.db.commit()
 
 

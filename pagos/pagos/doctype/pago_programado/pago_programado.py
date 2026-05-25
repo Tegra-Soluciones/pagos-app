@@ -3,7 +3,7 @@ from frappe.model.document import Document
 from frappe.utils import today, add_days, add_months, getdate
 
 
-class PaymentSchedule(Document):
+class PagoProgramado(Document):
     def before_insert(self):
         if not self.owner_user:
             self.owner_user = frappe.session.user
