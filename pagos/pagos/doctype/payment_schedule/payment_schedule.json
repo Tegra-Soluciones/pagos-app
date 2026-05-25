@@ -1,0 +1,188 @@
+{
+  "actions": [],
+  "allow_rename": 0,
+  "autoname": "format:PAY-{YYYY}-{#####}",
+  "creation": "2026-05-25 00:00:00.000000",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "field_order": [
+    "title",
+    "related_to",
+    "category",
+    "column_break_1",
+    "amount",
+    "currency",
+    "due_date",
+    "status",
+    "section_recurrence",
+    "is_recurring",
+    "recurrence_type",
+    "recurrence_interval",
+    "recurrence_end_date",
+    "column_break_2",
+    "owner_user",
+    "notes"
+  ],
+  "fields": [
+    {
+      "fieldname": "title",
+      "fieldtype": "Data",
+      "label": "Título",
+      "reqd": 1,
+      "in_list_view": 1,
+      "bold": 1
+    },
+    {
+      "fieldname": "related_to",
+      "fieldtype": "Data",
+      "label": "Corresponde a",
+      "description": "¿A qué corresponde este pago? (ej: Renta oficina, Netflix, Luz CFE)",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "category",
+      "fieldtype": "Link",
+      "label": "Categoría",
+      "options": "Payment Category",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "column_break_1",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "amount",
+      "fieldtype": "Currency",
+      "label": "Cantidad",
+      "reqd": 1,
+      "options": "currency",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "currency",
+      "fieldtype": "Link",
+      "label": "Moneda",
+      "options": "Currency",
+      "default": "MXN"
+    },
+    {
+      "fieldname": "due_date",
+      "fieldtype": "Date",
+      "label": "Fecha de Vencimiento",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "status",
+      "fieldtype": "Select",
+      "label": "Estado",
+      "options": "Pending\nPaid\nOverdue\nCancelled",
+      "default": "Pending",
+      "in_list_view": 1,
+      "reqd": 1
+    },
+    {
+      "fieldname": "section_recurrence",
+      "fieldtype": "Section Break",
+      "label": "Recurrencia"
+    },
+    {
+      "fieldname": "is_recurring",
+      "fieldtype": "Check",
+      "label": "¿Es recurrente?",
+      "default": 0
+    },
+    {
+      "fieldname": "recurrence_type",
+      "fieldtype": "Select",
+      "label": "Tipo de Recurrencia",
+      "options": "\nDaily\nWeekly\nMonthly\nQuarterly\nYearly",
+      "depends_on": "eval:doc.is_recurring==1"
+    },
+    {
+      "fieldname": "recurrence_interval",
+      "fieldtype": "Int",
+      "label": "Cada cuántos períodos",
+      "default": 1,
+      "depends_on": "eval:doc.is_recurring==1",
+      "description": "Ej: 1 = cada mes, 2 = cada 2 meses"
+    },
+    {
+      "fieldname": "recurrence_end_date",
+      "fieldtype": "Date",
+      "label": "Fecha de Fin de Recurrencia",
+      "depends_on": "eval:doc.is_recurring==1"
+    },
+    {
+      "fieldname": "column_break_2",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "owner_user",
+      "fieldtype": "Link",
+      "label": "Responsable",
+      "options": "User",
+      "read_only": 1
+    },
+    {
+      "fieldname": "notes",
+      "fieldtype": "Text",
+      "label": "Notas"
+    }
+  ],
+  "links": [],
+  "modified": "2026-05-25 00:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "Pagos",
+  "name": "Payment Schedule",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "create": 1,
+      "delete": 1,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "System Manager",
+      "share": 1,
+      "submit": 0,
+      "write": 1
+    },
+    {
+      "create": 1,
+      "delete": 1,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "All",
+      "share": 1,
+      "write": 1
+    }
+  ],
+  "search_fields": "title,related_to,status",
+  "sort_field": "due_date",
+  "sort_order": "ASC",
+  "states": [
+    {
+      "color": "Yellow",
+      "title": "Pending"
+    },
+    {
+      "color": "Green",
+      "title": "Paid"
+    },
+    {
+      "color": "Red",
+      "title": "Overdue"
+    },
+    {
+      "color": "Gray",
+      "title": "Cancelled"
+    }
+  ],
+  "track_changes": 1
+}

@@ -1,0 +1,14 @@
+[project]
+name = "pagos"
+version = "0.1.0"
+description = "Recordatorio y calendarización de pagos — SPA sobre ERPNext v15"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["frappe"]
+
+[build-system]
+requires = ["flit_core >=3.4,<4"]
+build-backend = "flit_core.buildapi"
+
+[tool.flit.module]
+name = "pagos"

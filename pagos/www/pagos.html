@@ -1,0 +1,27 @@
+---
+title: Pagos
+no_cache: 1
+---
+
+{%- block head_include %}
+<link rel="icon" type="image/svg+xml" href="/assets/pagos/images/logo.svg" />
+<link rel="stylesheet" href="/assets/pagos/pagos/index.css" />
+<script>
+  window.frappe = window.frappe || {};
+  window.frappe.csrf_token = "{{ csrf_token }}";
+  window.csrf_token = "{{ csrf_token }}";
+  window.site_name = "{{ site_name }}";
+</script>
+{%- endblock %}
+
+{%- block navbar -%}{%- endblock -%}
+{%- block footer -%}{%- endblock -%}
+{%- block base_scripts -%}{%- endblock -%}
+
+{%- block content %}
+<div id="app"></div>
+{%- endblock %}
+
+{%- block script %}
+<script type="module" src="/assets/pagos/pagos/main.js"></script>
+{%- endblock %}

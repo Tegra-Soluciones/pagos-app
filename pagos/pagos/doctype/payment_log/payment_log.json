@@ -1,0 +1,89 @@
+{
+  "actions": [],
+  "autoname": "format:LOG-{YYYY}-{#####}",
+  "creation": "2026-05-25 00:00:00.000000",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "field_order": [
+    "payment_schedule",
+    "paid_date",
+    "amount",
+    "currency",
+    "notes"
+  ],
+  "fields": [
+    {
+      "fieldname": "payment_schedule",
+      "fieldtype": "Link",
+      "label": "Pago",
+      "options": "Payment Schedule",
+      "reqd": 1,
+      "in_list_view": 1,
+      "bold": 1
+    },
+    {
+      "fieldname": "paid_date",
+      "fieldtype": "Date",
+      "label": "Fecha de Pago",
+      "reqd": 1,
+      "in_list_view": 1,
+      "default": "Today"
+    },
+    {
+      "fieldname": "amount",
+      "fieldtype": "Currency",
+      "label": "Monto Pagado",
+      "reqd": 1,
+      "options": "currency",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "currency",
+      "fieldtype": "Link",
+      "label": "Moneda",
+      "options": "Currency",
+      "default": "MXN"
+    },
+    {
+      "fieldname": "notes",
+      "fieldtype": "Text",
+      "label": "Notas"
+    }
+  ],
+  "links": [],
+  "modified": "2026-05-25 00:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "Pagos",
+  "name": "Payment Log",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "create": 1,
+      "delete": 1,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "System Manager",
+      "share": 1,
+      "write": 1
+    },
+    {
+      "create": 1,
+      "delete": 0,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "All",
+      "share": 1,
+      "write": 0
+    }
+  ],
+  "sort_field": "paid_date",
+  "sort_order": "DESC",
+  "states": [],
+  "track_changes": 1
+}
