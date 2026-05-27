@@ -1,8 +1,8 @@
 """
 API endpoints for the Pagos SPA.
 
-Business rule: payments due Mon–Sun of a given week must be
-paid no later than the Friday of that same week.
+Reminder rule: payments due within the next 3 days show a "due soon"
+warning on their card. Overdue payments show how many days past due.
 
 Recurring logic:
   When a recurring payment is first created, we pre-generate all
@@ -18,13 +18,9 @@ from datetime import date, timedelta
 
 # ─── helpers ──────────────────────────────────────────────────────────────────
 
-def _week_bounds(ref=None):
-    if ref is None:
-        ref = getdate(today())
-    monday = ref - timedelta(days=ref.weekday())
-    sunday = monday + timedelta(days=6)
-    friday = monday + timedelta(days=4)
-    return monday, sunday, friday
+def _days_until(due_date, today_d):
+    """Positive = days until due, negative = days overdue."""
+    return (getdate(due_date) - today_d).days
 
 
 def _status_color(status):
@@ -109,55 +105,57 @@ def _pre_generate_occurrences(source_name, months_ahead=12):
 
 # ─── dashboard ────────────────────────────────────────────────────────────────
 
+SOON_DAYS = 3  # warn when due within this many days
+
 @frappe.whitelist()
 def get_dashboard():
     today_d = getdate(today())
-    monday, sunday, friday = _week_bounds(today_d)
+    soon_cutoff = today_d + timedelta(days=SOON_DAYS)
 
-    # This week — Pending/Overdue only
-    this_week = frappe.get_all(
-        "Pago Programado",
-        filters={
-            "due_date": ["between", [monday.isoformat(), sunday.isoformat()]],
-            "status": ["in", ["Pending", "Overdue"]],
-        },
-        fields=["name", "title", "amount", "currency", "due_date", "status",
-                "category", "related_to", "is_recurring", "recurrence_type"],
-        order_by="due_date asc",
-    )
-    for p in this_week:
-        p["payment_deadline"] = friday.isoformat()
-        p["days_until_friday"] = (friday - today_d).days
-        p["is_urgent"] = today_d >= friday
-        p["color"] = _status_color(p["status"])
+    _fields = ["name", "title", "amount", "currency", "due_date", "status",
+               "category", "related_to", "is_recurring", "recurrence_type"]
 
-    # Next 30 days — Pending only
-    next_start = (sunday + timedelta(days=1)).isoformat()
-    next_end = (today_d + timedelta(days=30)).isoformat()
-    upcoming = frappe.get_all(
-        "Pago Programado",
-        filters={
-            "due_date": ["between", [next_start, next_end]],
-            "status": ["in", ["Pending", "Overdue"]],
-        },
-        fields=["name", "title", "amount", "currency", "due_date", "status",
-                "category", "related_to", "is_recurring", "recurrence_type"],
-        order_by="due_date asc",
-    )
-    for p in upcoming:
-        p["color"] = _status_color(p["status"])
-
-    # Overdue before this week
+    # Overdue — past due, not paid
     overdue = frappe.get_all(
         "Pago Programado",
-        filters={"due_date": ["<", monday.isoformat()], "status": "Overdue"},
-        fields=["name", "title", "amount", "currency", "due_date", "status",
-                "category", "related_to"],
+        filters={"due_date": ["<", today_d.isoformat()], "status": ["in", ["Pending", "Overdue"]]},
+        fields=_fields,
         order_by="due_date asc",
     )
     for p in overdue:
         p["color"] = "red"
         p["days_overdue"] = (today_d - getdate(p["due_date"])).days
+
+    # Due soon — today through next SOON_DAYS days, Pending/Overdue
+    due_soon = frappe.get_all(
+        "Pago Programado",
+        filters={
+            "due_date": ["between", [today_d.isoformat(), soon_cutoff.isoformat()]],
+            "status": ["in", ["Pending", "Overdue"]],
+        },
+        fields=_fields,
+        order_by="due_date asc",
+    )
+    for p in due_soon:
+        p["color"] = _status_color(p["status"])
+        p["days_until_due"] = _days_until(p["due_date"], today_d)
+
+    # Upcoming — beyond SOON_DAYS, next 30 days
+    upcoming = frappe.get_all(
+        "Pago Programado",
+        filters={
+            "due_date": ["between", [
+                (today_d + timedelta(days=SOON_DAYS + 1)).isoformat(),
+                (today_d + timedelta(days=30)).isoformat(),
+            ]],
+            "status": ["in", ["Pending", "Overdue"]],
+        },
+        fields=_fields,
+        order_by="due_date asc",
+    )
+    for p in upcoming:
+        p["color"] = _status_color(p["status"])
+        p["days_until_due"] = _days_until(p["due_date"], today_d)
 
     # Paid this month
     month_start = date(today_d.year, today_d.month, 1).isoformat()
@@ -167,30 +165,25 @@ def get_dashboard():
             "due_date": ["between", [month_start, today_d.isoformat()]],
             "status": "Paid",
         },
-        fields=["name", "title", "amount", "currency", "due_date", "status",
-                "category", "related_to", "is_recurring"],
+        fields=_fields,
         order_by="due_date desc",
     )
 
     counts = {
-        "pending": frappe.db.count("Pago Programado", {"status": "Pending"}),
-        "overdue":  frappe.db.count("Pago Programado", {"status": "Overdue"}),
+        "pending":        frappe.db.count("Pago Programado", {"status": "Pending"}),
+        "overdue":        frappe.db.count("Pago Programado", {"status": "Overdue"}),
+        "due_soon":       len(due_soon),
         "paid_this_month": len(paid_month),
     }
 
     return {
-        "this_week": this_week,
-        "upcoming": upcoming,
-        "overdue": overdue,
+        "due_soon":       due_soon,
+        "overdue":        overdue,
+        "upcoming":       upcoming,
         "paid_this_month": paid_month,
-        "counts": counts,
-        "week_total": sum(p.get("amount") or 0 for p in this_week),
-        "week_bounds": {
-            "monday": monday.isoformat(),
-            "friday": friday.isoformat(),
-            "sunday": sunday.isoformat(),
-        },
-        "today": today_d.isoformat(),
+        "counts":         counts,
+        "soon_total":     sum(p.get("amount") or 0 for p in due_soon),
+        "today":          today_d.isoformat(),
     }
 
 

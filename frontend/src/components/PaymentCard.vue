@@ -36,15 +36,14 @@
         </span>
       </div>
 
-      <!-- Deadline alert -->
-      <div v-if="payment.payment_deadline" class="mt-2">
+      <!-- Due soon alert -->
+      <div v-if="payment.days_until_due !== undefined && payment.days_until_due >= 0" class="mt-2">
         <span class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-md"
-              :style="payment.is_urgent
+              :style="payment.days_until_due === 0
                 ? 'background:#fef2f2;color:#b91c1c;border:1px solid #fecaca'
                 : 'background:#fffbeb;color:#92400e;border:1px solid #fde68a'">
           <ClockIcon class="w-3 h-3" />
-          {{ payment.is_urgent ? "¡Límite hoy!" : "Pagar antes del" }}
-          viernes {{ fmtShort(payment.payment_deadline) }}
+          {{ dueSoonLabel(payment.days_until_due) }}
         </span>
       </div>
       <div v-if="payment.days_overdue" class="mt-2">
@@ -112,8 +111,9 @@ function fmtDate(d) {
     weekday: "short", day: "numeric", month: "short",
   });
 }
-function fmtShort(d) {
-  if (!d) return "";
-  return new Date(d + "T12:00:00").toLocaleDateString("es-MX", { day: "numeric", month: "short" });
+function dueSoonLabel(days) {
+  if (days === 0) return "¡Vence hoy!";
+  if (days === 1) return "Vence mañana";
+  return `Vence en ${days} días`;
 }
 </script>
