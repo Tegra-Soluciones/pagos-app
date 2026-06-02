@@ -43,14 +43,11 @@
               </div>
             </div>
 
-            <!-- Week deadline -->
-            <div v-if="weekInfo" class="mt-4 inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium"
-                 :style="weekInfo.urgent
-                   ? 'background:#fef2f2;color:#b91c1c;border:1px solid #fecaca'
-                   : 'background:#fffbeb;color:#92400e;border:1px solid #fde68a'">
+            <!-- Due soon / overdue alert -->
+            <div v-if="dueSoonInfo" class="mt-4 inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium"
+                 :style="dueSoonInfo.style">
               <ClockIcon class="w-3.5 h-3.5" />
-              Límite de pago: viernes {{ weekInfo.fridayLabel }}
-              <span v-if="weekInfo.urgent" class="font-bold">— ¡Hoy!</span>
+              {{ dueSoonInfo.label }}
             </div>
           </div>
 
@@ -167,18 +164,29 @@ const recurrenceLabels = {
 };
 const recurrenceLabel = computed(() => recurrenceLabels[payment.value?.recurrence_type] || "");
 
-const weekInfo = computed(() => {
+const dueSoonInfo = computed(() => {
   if (!payment.value?.due_date) return null;
   if (!["Pending", "Overdue"].includes(payment.value.status)) return null;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
   const due = new Date(payment.value.due_date + "T12:00:00");
-  const dow = due.getDay();
-  const daysFromMon = dow === 0 ? 6 : dow - 1;
-  const mon = new Date(due); mon.setDate(due.getDate() - daysFromMon);
-  const fri = new Date(mon); fri.setDate(mon.getDate() + 4);
-  return {
-    fridayLabel: fri.toLocaleDateString("es-MX", { day: "numeric", month: "long" }),
-    urgent: new Date() >= fri,
+  const days = Math.round((due - today) / 86400000);
+  if (days < 0) return {
+    label: `Vencido hace ${Math.abs(days)} día${Math.abs(days) !== 1 ? "s" : ""}`,
+    style: "background:#fef2f2;color:#b91c1c;border:1px solid #fecaca",
   };
+  if (days === 0) return {
+    label: "¡Vence hoy!",
+    style: "background:#fef2f2;color:#b91c1c;border:1px solid #fecaca",
+  };
+  if (days === 1) return {
+    label: "Vence mañana",
+    style: "background:#fffbeb;color:#92400e;border:1px solid #fde68a",
+  };
+  if (days <= 3) return {
+    label: `Vence en ${days} días`,
+    style: "background:#fffbeb;color:#92400e;border:1px solid #fde68a",
+  };
+  return null;
 });
 
 onMounted(async () => {
