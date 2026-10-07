@@ -178,11 +178,11 @@ function parseDate(s) {
 function sumAmount(items) {
   return items.reduce((t, p) => t + (p.amount || 0), 0);
 }
-// Proveedor = campo "Corresponde a" (related_to); sin valor → "Sin proveedor".
+// Proveedor = título del pago (p. ej. KAPITAL BANK, INGRAM); "Corresponde a" es la referencia.
 function groupBySupplier(items) {
   const m = new Map();
   for (const p of items) {
-    const name = (p.related_to || "").trim();
+    const name = (p.title || "").trim().replace(/\s+/g, " ");
     const key = name.toLowerCase();
     if (!m.has(key)) m.set(key, { key, name: name || "Sin proveedor", items: [] });
     m.get(key).items.push(p);
