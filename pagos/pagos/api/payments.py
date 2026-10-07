@@ -268,6 +268,14 @@ def get_payments_by_month(year=None, month=None, status=None, category=None):
         order_by="due_date asc",
     )
     for p in payments:
+        if p["status"] in ("Pending", "Overdue"):
+            days = _days_until(p["due_date"], today_d)
+            # Vencido sólo si la fecha ya pasó; si no, es pendiente
+            p["status"] = "Overdue" if days < 0 else "Pending"
+            if days < 0:
+                p["days_overdue"] = -days
+            elif days <= SOON_DAYS:
+                p["days_until_due"] = days  # alerta de "próximo a vencer"
         p["color"] = _status_color(p["status"])
 
     pending = [p for p in payments if p["status"] in ("Pending", "Overdue")]

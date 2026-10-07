@@ -67,9 +67,22 @@
             <CheckCircle2Icon class="w-8 h-8 text-emerald-400 mx-auto mb-2" />
             <p class="text-sm text-gray-500">Sin pagos pendientes en {{ monthLabel }}</p>
           </div>
-          <div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 mt-3">
-            <PaymentCard v-for="p in monthData.pending" :key="p.name" :payment="p"
-                         @mark-paid="openMarkPaid(p)" @refresh="fetchMonth" />
+          <div v-else class="space-y-5 mt-3">
+            <div v-for="w in pendingWeeks" :key="w.key">
+              <WeekHeader :week="w" :fmt="fmt" />
+              <div v-for="sup in w.suppliers" :key="sup.key" class="mt-3">
+                <div class="flex items-center justify-between text-xs mb-1.5">
+                  <span class="font-medium text-gray-600 truncate">{{ sup.name }}</span>
+                  <span class="text-gray-500">
+                    {{ sup.items.length }} · <span class="font-semibold text-gray-800">{{ fmt(sup.total) }}</span>
+                  </span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                  <PaymentCard v-for="p in sup.items" :key="p.name" :payment="p"
+                             @mark-paid="openMarkPaid(p)" @refresh="fetchMonth" />
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -82,8 +95,21 @@
                class="card px-6 py-6 text-center mt-3 border-dashed">
             <p class="text-sm text-gray-400">Sin pagos registrados aún en {{ monthLabel }}</p>
           </div>
-          <div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 mt-3">
-            <PaymentCard v-for="p in monthData.paid" :key="p.name" :payment="p" />
+          <div v-else class="space-y-5 mt-3">
+            <div v-for="w in paidWeeks" :key="w.key">
+              <WeekHeader :week="w" :fmt="fmt" />
+              <div v-for="sup in w.suppliers" :key="sup.key" class="mt-3">
+                <div class="flex items-center justify-between text-xs mb-1.5">
+                  <span class="font-medium text-gray-600 truncate">{{ sup.name }}</span>
+                  <span class="text-gray-500">
+                    {{ sup.items.length }} · <span class="font-semibold text-gray-800">{{ fmt(sup.total) }}</span>
+                  </span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                  <PaymentCard v-for="p in sup.items" :key="p.name" :payment="p" />
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -121,6 +147,7 @@ import { api } from "@/api";
 import PaymentCard from "@/components/PaymentCard.vue";
 import MarkPaidModal from "@/components/MarkPaidModal.vue";
 import SectionHeader from "@/components/SectionHeader.vue";
+import WeekHeader from "@/components/WeekHeader.vue";
 
 const today = new Date();
 const currentYear  = ref(today.getFullYear());
@@ -140,6 +167,50 @@ const monthLabel = computed(() =>
   new Date(currentYear.value, currentMonth.value - 1, 1)
     .toLocaleDateString("es-MX", { month: "long", year: "numeric" })
 );
+
+// Los pagos se hacen los viernes: cada pago se agrupa en el último viernes
+// en o antes de su vencimiento (sáb/dom → viernes anterior; lun–jue → viernes
+// de la semana previa), para no pagar después de la fecha límite.
+function parseDate(s) {
+  const [y, m, d] = s.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+function sumAmount(items) {
+  return items.reduce((t, p) => t + (p.amount || 0), 0);
+}
+// Proveedor = campo "Corresponde a" (related_to); sin valor → "Sin proveedor".
+function groupBySupplier(items) {
+  const m = new Map();
+  for (const p of items) {
+    const name = (p.related_to || "").trim();
+    const key = name.toLowerCase();
+    if (!m.has(key)) m.set(key, { key, name: name || "Sin proveedor", items: [] });
+    m.get(key).items.push(p);
+  }
+  return [...m.values()]
+    .map((g) => ({ ...g, total: sumAmount(g.items) }))
+    .sort((a, b) => (a.key === "") - (b.key === "") || a.name.localeCompare(b.name, "es"));
+}
+function groupByWeek(list) {
+  const weeks = new Map();
+  for (const p of list) {
+    const d = parseDate(p.due_date);
+    const friday = new Date(d);
+    friday.setDate(d.getDate() - ((d.getDay() + 2) % 7));
+    const key = friday.getTime();
+    if (!weeks.has(key)) weeks.set(key, { key, friday, items: [] });
+    weeks.get(key).items.push(p);
+  }
+  return [...weeks.values()]
+    .sort((a, b) => a.key - b.key)
+    .map((w) => ({
+      ...w,
+      total: sumAmount(w.items),
+      suppliers: groupBySupplier(w.items),
+    }));
+}
+const pendingWeeks = computed(() => groupByWeek(monthData.value?.pending || []));
+const paidWeeks = computed(() => groupByWeek(monthData.value?.paid || []));
 
 function changeMonth(delta) {
   let m = currentMonth.value + delta;
